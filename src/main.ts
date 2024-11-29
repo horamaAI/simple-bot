@@ -1,6 +1,6 @@
 import { BskyAgent, AppBskyGraphDefs } from '@atproto/api';
 import * as dotenv from 'dotenv';
-import { CronJob } from 'cron';
+//import { CronJob } from 'cron';
 import * as process from 'process';
 
 dotenv.config();
@@ -37,18 +37,26 @@ async function main() {
   //});
   console.log("Just posted!");
   //console.log("show abablip!", abablips);
-  console.log("show abablip!", abatest);
+  abatest.then((followers)=>{
+    for (const follower of followers) {
+      if (follower?.subject?.description?.toLowerCase().includes("umublip")) {
+        console.log("yes, a umublip")
+      }
+    }
+    console.log("show content ", followers)
+  });
+  //console.log("show abablip!", abatest.then()items);
 }
 
 main();
 
 
 // Run this on a cron job
-const scheduleExpressionMinute = '* * * * *'; // Run once every minute for testing
+//const scheduleExpressionMinute = '* * * * *'; // Run once every minute for testing
 //const scheduleExpressionFifteenMinute = '*/15 * * * *'; // Run once every 15 minutes
 //const scheduleExpression = '0 */3 * * *'; // Run once every three hours in prod
 
-const job = new CronJob(scheduleExpressionMinute, main); // change to scheduleExpressionMinute for testing
+//const job = new CronJob(scheduleExpressionMinute, main); // change to scheduleExpressionMinute for testing
 //const job = new CronJob(scheduleExpression, main); // change to scheduleExpressionMinute for testing
 
-job.start();
+//job.start();
