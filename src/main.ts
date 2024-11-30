@@ -10,10 +10,17 @@ const agent = new BskyAgent({
     service: 'https://bsky.social',
   });
 
-//static getAbablipFollowers {
-async function getAbablipFollowers() {
-  //const { uri } = 'at://did:plc:plveesmuzs3rizet3tfc5b56/app.bsky.graph.list/3lbpju5w4il25'
-  let uri = 'at://did:plc:plveesmuzs3rizet3tfc5b56/app.bsky.graph.list/3lbpju5w4il25';
+function isFollowerReallyUmublip(umublipToCheck: any) {
+  return umublipToCheck!.description!.toLowerCase().includes("umublip");
+}
+
+async function getAbablipFilteredFollowers() {
+  let { data: { followers } } = await agent.app.bsky.graph.getFollowers({actor: process.env.BLUESKY_USERNAME!});
+  return followers.filter(isFollowerReallyUmublip);
+}
+
+async function getAbablipListMembers() {
+  let uri = process.env.BLUESKY_ABABLIP_LIST_DID!;
   let members: AppBskyGraphDefs.ListItemView[] = [];
   let cursor: string | undefined;
   do {
@@ -30,22 +37,27 @@ async function getAbablipFollowers() {
 
 async function main() {
   await agent.login({ identifier: process.env.BLUESKY_USERNAME!, password: process.env.BLUESKY_PASSWORD!});
-  // let abablips = getAbablipFollowers();
-  let abatest = getAbablipFollowers();
+  let abablipFollowers = getAbablipFilteredFollowers();
+  let abablipListMembers = getAbablipListMembers();
   //await agent.post({
+  //    text: "🇧🇮"
   //    text: "🙂"
+  //
   //});
   console.log("Just posted!");
-  //console.log("show abablip!", abablips);
-  abatest.then((followers)=>{
-    for (const follower of followers) {
-      if (follower?.subject?.description?.toLowerCase().includes("umublip")) {
-        console.log("yes, a umublip")
+  abablipFollowers.then((follower)=>{
+    console.log("show umublip wa vrai: ", follower);
+  });
+  abablipListMembers.then((members)=>{
+    // validate that member is really a blip
+    // really necessary ? since prerequisite of being a member is to be umublip
+    for (const member of members) {
+      if (member?.subject?.description?.toLowerCase().includes("umublip")) {
+        console.log("yes, a umublip");
       }
     }
-    console.log("show content ", followers)
+    console.log("show the abablip list member: ", members);
   });
-  //console.log("show abablip!", abatest.then()items);
 }
 
 main();
