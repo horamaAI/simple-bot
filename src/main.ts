@@ -35,6 +35,21 @@ async function getAbablipListMembers() {
   return members;
 }
 
+// show data when required, maybe most appropriate to activate when
+// in debug mode ?
+async function showData(abablipFollowers: Promise<any>, abablipListMembers: Promise<any>) {
+  abablipFollowers.then((follower)=>{
+    console.log("show umublip wa vrai: ", follower);
+  });
+  abablipListMembers.then((members)=>{
+    console.log("show the abablip list member (should be a true umublip and have/had \"umublip\" in his description): ", members);
+  });
+}
+
+//async function addMissingAbablips() {
+//
+//}
+
 async function main() {
   await agent.login({ identifier: process.env.BLUESKY_USERNAME!, password: process.env.BLUESKY_PASSWORD!});
   let abablipFollowers = getAbablipFilteredFollowers();
@@ -45,19 +60,7 @@ async function main() {
   //
   //});
   console.log("Just posted!");
-  abablipFollowers.then((follower)=>{
-    console.log("show umublip wa vrai: ", follower);
-  });
-  abablipListMembers.then((members)=>{
-    // validate that member is really a blip
-    // really necessary ? since prerequisite of being a member is to be umublip
-    for (const member of members) {
-      if (member?.subject?.description?.toLowerCase().includes("umublip")) {
-        console.log("yes, a umublip");
-      }
-    }
-    console.log("show the abablip list member: ", members);
-  });
+  showData(abablipFollowers, abablipListMembers);
 }
 
 main();
