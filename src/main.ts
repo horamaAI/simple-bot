@@ -50,6 +50,11 @@ async function showData(abablipFollowers: Promise<any>, abablipListMembers: Prom
 //
 //}
 
+async function testApiEntry() {
+  let { data: { notifications } } = await agent.app.bsky.notification.listNotifications();
+  console.log("check content: ", notifications);
+}
+
 async function main() {
   await agent.login({ identifier: process.env.BLUESKY_USERNAME!, password: process.env.BLUESKY_PASSWORD!});
   let abablipFollowers = getAbablipFilteredFollowers();
@@ -61,6 +66,7 @@ async function main() {
   //});
   console.log("Just posted!");
   showData(abablipFollowers, abablipListMembers);
+  testApiEntry();
 }
 
 main();
