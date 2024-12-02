@@ -9,23 +9,24 @@ dotenv.config();
 const agent = new BskyAgent({
     service: 'https://bsky.social',
   });
+const abablipListUri = process.env.BLUESKY_ABABLIP_LIST_DID!;
+const abablipUsername = process.env.BLUESKY_USERNAME!;
 
 function isFollowerReallyUmublip(umublipToCheck: any) {
   return umublipToCheck!.description!.toLowerCase().includes("umublip");
 }
 
 async function getAbablipFilteredFollowers() {
-  let { data: { followers } } = await agent.app.bsky.graph.getFollowers({actor: process.env.BLUESKY_USERNAME!});
+  let { data: { followers } } = await agent.app.bsky.graph.getFollowers({actor: abablipUsername!});
   return followers.filter(isFollowerReallyUmublip);
 }
 
 async function getAbablipListMembers() {
-  let uri = process.env.BLUESKY_ABABLIP_LIST_DID!;
   let members: AppBskyGraphDefs.ListItemView[] = [];
   let cursor: string | undefined;
   do {
     let res = await agent.app.bsky.graph.getList({
-      list: uri,
+      list: abablipListUri,
       limit: 30,
       cursor
     });
@@ -50,9 +51,28 @@ async function showData(abablipFollowers: Promise<any>, abablipListMembers: Prom
 //
 //}
 
+async function getUnreadFollowNotifications() {
+  let { data: { notifications } } = await agent.app.bsky.notification.listNotifications();
+  return notifications!.filter((notification)=> !notification!.isRead && notification!.reason === "follow");
+}
+
 async function testApiEntry() {
   let { data: { notifications } } = await agent.app.bsky.notification.listNotifications();
   console.log("check content: ", notifications);
+}
+
+async function addFollowerToAbablipList(followerDid: string) {
+  await agent.com.atproto.repo.createRecord({
+    repo: agent.session.did,
+    collection: 'app.bsky.graph.listitem',
+    record: {
+      $type: 'app.bsky.graph.listitem',
+      subject: followerDid,
+      list: abablipListUri,
+      createdAt: new Date().toISOString()
+    }
+  });
+  //console.log("check content: ", notifications);
 }
 
 async function main() {
@@ -66,6 +86,9 @@ async function main() {
   //});
   console.log("Just posted!");
   showData(abablipFollowers, abablipListMembers);
+  let unreadFollowNotifications = getUnreadFollowNotifications();
+  unreadFollowNotifications.then((content)=> console.log("another ugly console log: ", content));
+  unreadFollowNotifications.then((notifications) => notifications.forEach((newFollower) => addFollowerToAbablipList(newFollower!.author!.did!)));
   testApiEntry();
 }
 
