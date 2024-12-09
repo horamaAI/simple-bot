@@ -9,7 +9,7 @@ dotenv.config();
 const agent = new BskyAgent({
     service: 'https://bsky.social',
   });
-const abablipListUri = process.env.BLUESKY_ABABLIP_LIST_DID!;
+const abablipListUri = process.env.BLUESKY_ABABLIP_LIST_URI!;
 const abablipUsername = process.env.BLUESKY_USERNAME!;
 
 function isFollowerReallyUmublip(umublipToCheck: any) {
@@ -63,7 +63,7 @@ async function testApiEntry() {
 
 async function addFollowerToAbablipList(followerDid: string) {
   await agent.com.atproto.repo.createRecord({
-    repo: agent.session.did,
+    repo: process.env.BLUESKY_USERNAME!,
     collection: 'app.bsky.graph.listitem',
     record: {
       $type: 'app.bsky.graph.listitem',
@@ -90,6 +90,8 @@ async function main() {
   unreadFollowNotifications.then((content)=> console.log("another ugly console log: ", content));
   unreadFollowNotifications.then((notifications) => notifications.forEach((newFollower) => addFollowerToAbablipList(newFollower!.author!.did!)));
   testApiEntry();
+  let wth = await agent.app.bsky.graph.getLists({actor: process.env.BLUESKY_USERNAME!, limit: 30});
+  console.log("as usual, very ugly:", wth.data);
 }
 
 main();
