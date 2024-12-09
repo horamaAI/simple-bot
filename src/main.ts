@@ -21,6 +21,17 @@ async function getAbablipFilteredFollowers() {
   return followers.filter(isFollowerReallyUmublip);
 }
 
+async function addNewAbablipsFollowersToAbablipsList() {
+  let unreadFollowNotifications = getUnreadFollowNotifications();
+  unreadFollowNotifications.then((notifications) => notifications.forEach((newFollowNotification) => {
+    let newFollower = newFollowNotification!.author!;
+    if(isFollowerReallyUmublip(newFollower)){
+      addFollowerToAbablipList(newFollower.did);
+      console.log("added to abablip list new follower: ", newFollower.handle);
+    }
+  }));
+}
+
 async function getAbablipListMembers() {
   let members: AppBskyGraphDefs.ListItemView[] = [];
   let cursor: string | undefined;
@@ -38,18 +49,12 @@ async function getAbablipListMembers() {
 
 // show data when required, maybe most appropriate to activate when
 // in debug mode ?
-async function showData(abablipFollowers: Promise<any>, abablipListMembers: Promise<any>) {
-  abablipFollowers.then((follower)=>{
-    console.log("show umublip wa vrai: ", follower);
-  });
-  abablipListMembers.then((members)=>{
-    console.log("show the abablip list member (should be a true umublip and have/had \"umublip\" in his description): ", members);
+async function showPromiseData(msg: string, promiseData: Promise<any>) {
+  promiseData.then((content)=>{
+    console.log(msg, "show data content:", content);
+    //console.log(msg, " show data content size: ", content.length);
   });
 }
-
-//async function addMissingAbablips() {
-//
-//}
 
 async function getUnreadFollowNotifications() {
   let { data: { notifications } } = await agent.app.bsky.notification.listNotifications();
@@ -72,7 +77,6 @@ async function addFollowerToAbablipList(followerDid: string) {
       createdAt: new Date().toISOString()
     }
   });
-  //console.log("check content: ", notifications);
 }
 
 async function main() {
@@ -85,13 +89,10 @@ async function main() {
   //
   //});
   console.log("Just posted!");
-  showData(abablipFollowers, abablipListMembers);
-  let unreadFollowNotifications = getUnreadFollowNotifications();
-  unreadFollowNotifications.then((content)=> console.log("another ugly console log: ", content));
-  unreadFollowNotifications.then((notifications) => notifications.forEach((newFollower) => addFollowerToAbablipList(newFollower!.author!.did!)));
+  showPromiseData("show just abablip followers:", abablipFollowers);
+  showPromiseData("show list members:", abablipListMembers);
+  addNewAbablipsFollowersToAbablipsList();
   testApiEntry();
-  let wth = await agent.app.bsky.graph.getLists({actor: process.env.BLUESKY_USERNAME!, limit: 30});
-  console.log("as usual, very ugly:", wth.data);
 }
 
 main();
