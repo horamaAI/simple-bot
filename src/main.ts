@@ -21,17 +21,6 @@ async function getAbablipFilteredFollowers() {
   return followers.filter(isFollowerReallyUmublip);
 }
 
-async function addNewAbablipsFollowersToAbablipsList() {
-  let unreadFollowNotifications = getUnreadFollowNotifications();
-  unreadFollowNotifications.then((notifications) => notifications.forEach((newFollowNotification) => {
-    let newFollower = newFollowNotification!.author!;
-    if(isFollowerReallyUmublip(newFollower)){
-      addFollowerToAbablipList(newFollower.did);
-      console.log("added to abablip list new follower: ", newFollower.handle);
-    }
-  }));
-}
-
 async function getAbablipListMembers() {
   let members: AppBskyGraphDefs.ListItemView[] = [];
   let cursor: string | undefined;
@@ -56,14 +45,17 @@ async function showPromiseData(msg: string, promiseData: Promise<any>) {
   });
 }
 
+function markNotificationsAsSeen() {
+ let nowDateTime: Date = new Date(Date.now())
+ console.log("notifications marked as all seen at:", nowDateTime)
+ agent.app.bsky.notification.updateSeen({
+   seenAt: nowDateTime.toISOString()
+ });
+}
+
 async function getUnreadFollowNotifications() {
   let { data: { notifications } } = await agent.app.bsky.notification.listNotifications();
   return notifications!.filter((notification)=> !notification!.isRead && notification!.reason === "follow");
-}
-
-async function testApiEntry() {
-  let { data: { notifications } } = await agent.app.bsky.notification.listNotifications();
-  console.log("check content: ", notifications);
 }
 
 async function addFollowerToAbablipList(followerDid: string) {
@@ -77,6 +69,39 @@ async function addFollowerToAbablipList(followerDid: string) {
       createdAt: new Date().toISOString()
     }
   });
+}
+
+async function removeRecord(rkeyToDelete: string) {
+  await agent.com.atproto.repo.deleteRecord({
+    repo: process.env.BLUESKY_USERNAME!,
+    collection: 'app.bsky.graph.listitem',
+    rkey: rkeyToDelete
+  });
+}
+
+async function addNewAbablipsFollowersToAbablipsList() {
+  let unreadFollowNotifications = getUnreadFollowNotifications();
+  unreadFollowNotifications.then((notifications) => {
+    notifications.forEach((newFollowNotification) => {
+      let newFollower = newFollowNotification!.author!;
+      if(isFollowerReallyUmublip(newFollower)){
+        addFollowerToAbablipList(newFollower.did);
+        console.log("added to abablip list new follower: ", newFollower.handle);
+      }
+    });
+    // if had unread, then mark them as read
+    if (notifications.length > 0) {
+      markNotificationsAsSeen();
+    }
+  });
+}
+
+async function testApiEntry() {
+  //let { data: { notifications } } = await agent.app.bsky.notification.listNotifications();
+  //console.log("check content: ", notifications);
+  const {repo, collection, rkey} = new AtUri(abablipListUri)
+  console.log(repo, collection, rkey);
+   console.log("check 12, 21");
 }
 
 async function main() {
@@ -96,7 +121,6 @@ async function main() {
 }
 
 main();
-
 
 // Run this on a cron job
 //const scheduleExpressionMinute = '* * * * *'; // Run once every minute for testing
