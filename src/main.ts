@@ -1,23 +1,31 @@
 import { BskyAgent, AppBskyGraphDefs } from '@atproto/api';
+import { AtUri } from '@atproto/syntax';
 import * as dotenv from 'dotenv';
-//import { CronJob } from 'cron';
+import { CronJob } from 'cron';
 import * as process from 'process';
 
 dotenv.config();
 
+const ABABLIP_HANDLE = process.env.MY_BLUESKY_HANDLE!;
+const ABABLIP_DID = process.env.MY_BLUESKY_DID!;
+const ABABLIP_LIST_URI = process.env.MY_BLUESKY_ABABLIP_LIST_URI!;
+const ABABLIP_PSWD = process.env.MY_BLUESKY_PASSWORD!;
+
 // Create a Bluesky Agent 
 const agent = new BskyAgent({
-    service: 'https://bsky.social',
-  });
-const abablipListUri = process.env.BLUESKY_ABABLIP_LIST_URI!;
-const abablipUsername = process.env.BLUESKY_USERNAME!;
+    service: 'https://bsky.social'
+});
 
 function isFollowerReallyUmublip(umublipToCheck: any) {
   return umublipToCheck!.description!.toLowerCase().includes("umublip");
 }
 
+//******
+// section: cleanup/remove abablip members that stopped following the feed
+//******
+
 async function getAbablipFilteredFollowers() {
-  let { data: { followers } } = await agent.app.bsky.graph.getFollowers({actor: abablipUsername!});
+  let { data: { followers } } = await agent.app.bsky.graph.getFollowers({actor: ABABLIP_HANDLE});
   return followers.filter(isFollowerReallyUmublip);
 }
 
@@ -26,7 +34,7 @@ async function getAbablipListMembers() {
   let cursor: string | undefined;
   do {
     let res = await agent.app.bsky.graph.getList({
-      list: abablipListUri,
+      list: ABABLIP_LIST_URI,
       limit: 30,
       cursor
     });
@@ -36,25 +44,33 @@ async function getAbablipListMembers() {
   return members;
 }
 
-function isSubjectInAbablipFollowers(subjectDid: string, abablipFollowers: any) {
-  return !abablipFollowers.some((follower: any) => follower.did === subjectDid);
+function isMembersRecordSubjectStillFollowingFeed(subjectDid: string, abablipFollowers: any) {
+  return abablipFollowers.some((follower: any) => follower.did === subjectDid);
 }
 
 function getAbablipLeaving(abablipFollowers: any, abablipList: any) {
-  //showPromiseData("show just abablip followers:", abablipFollowers);
-  showPromiseData("show list members:", abablipList);
-  const abablipLeaving = abablipList.filter((listRecord: any) =>
-    isSubjectInAbablipFollowers(listRecord!.subject!.did!, abablipFollowers));
-  return abablipLeaving;
+  return abablipList
+    // first remove myself, don't wan't to leave
+    .filter((listRecord: any) => listRecord!.subject!.did! !== ABABLIP_DID)
+    .filter((listRecord: any) => !isMembersRecordSubjectStillFollowingFeed(listRecord!.subject!.did!, abablipFollowers));
 }
 
-// show data when required, maybe most appropriate to activate when
-// in debug mode ?
-//async function showPromiseData(msg: string, promiseData: Promise<any>) {
-function showPromiseData(msg: string, someData: any) {
-  //console.log(msg, "show data content:", someData);
-  console.log(msg, "show data content count:", someData.length);
+async function removeRecord(rkeyToDelete: string) {
+  await agent.com.atproto.repo.deleteRecord({
+    repo: ABABLIP_HANDLE,
+    collection: 'app.bsky.graph.listitem',
+    rkey: rkeyToDelete
+  });
 }
+
+function cleanUpTheseQuittersFromAbablipList(quitters: Array<string>) {
+  console.log("quitters records URIs:", quitters);
+  quitters.forEach(async (quitterUri: any) => removeRecord(new AtUri(quitterUri).rkey));
+}
+
+//******
+// section: add new followers to feed
+//******
 
 function markNotificationsAsSeen() {
  let nowDateTime: Date = new Date(Date.now())
@@ -71,85 +87,98 @@ async function getUnreadFollowNotifications() {
 
 async function addFollowerToAbablipList(followerDid: string) {
   await agent.com.atproto.repo.createRecord({
-    repo: process.env.BLUESKY_USERNAME!,
+    repo: ABABLIP_HANDLE,
     collection: 'app.bsky.graph.listitem',
     record: {
       $type: 'app.bsky.graph.listitem',
       subject: followerDid,
-      list: abablipListUri,
+      list: ABABLIP_LIST_URI,
       createdAt: new Date().toISOString()
     }
   });
 }
 
-//async function removeRecord(rkeyToDelete: string) {
-//  await agent.com.atproto.repo.deleteRecord({
-//    repo: process.env.BLUESKY_USERNAME!,
-//    collection: 'app.bsky.graph.listitem',
-//    rkey: rkeyToDelete
-//  });
+//******
+// section: utils, and, frankly, trash...
+//******
+
+// show data when needs debugging
+// maybe more appropriate to use solution active in debug mode ?
+//async function showPromiseData(msg: string, promiseData: Promise<any>) {
+function showPromiseData(msg: string, someData: any) {
+  //console.log(msg, "show data content:", someData);
+  console.log(msg, "show data content count:", someData.length);
+}
+
+//async function testApiEntry() {
+  //let { data: { records } } = await agent.com.atproto.repo.listRecords({
+  //  repo: ABABLIP_HANDLE,
+  //  collection: 'app.bsky.graph.listitem'
+  //});
+  //console.log("check 12, 21");
 //}
 
-async function addNewAbablipsFollowersToAbablipsListWhenApplicable() {
+//async function main() {
+//  await agent.login({ identifier: ABABLIP_HANDLE, password: ABABLIP_PSWD });
+//  //await agent.post({
+//  //    text: "🇧🇮"
+//  //    text: "🙂"
+//  //
+//  //});
+//  console.log("Just posted!");
+//  testApiEntry();
+//}
+//main();
+
+
+//******
+// section: main processes and their jobs
+//******
+
+async function doAddNewFollowersToFeed() {
+  await agent.login({ identifier: ABABLIP_HANDLE, password: ABABLIP_PSWD });
   let unreadFollowNotifications = getUnreadFollowNotifications();
   unreadFollowNotifications.then((notifications) => {
+    let count = 0;
     notifications.forEach((newFollowNotification) => {
       let newFollower = newFollowNotification!.author!;
       if(isFollowerReallyUmublip(newFollower)){
         addFollowerToAbablipList(newFollower.did);
         console.log("added to abablip list new follower: ", newFollower.handle);
       }
+      count++;
     });
-    // if had unread, then mark them as read
-    if (notifications.length > 0) {
+    // mark all notifications as read
+    if (notifications.length > 0 && notifications.length === count) {
       markNotificationsAsSeen();
     }
   });
 }
 
-async function testApiEntry() {
-  //let { data: { records } } = await agent.com.atproto.repo.listRecords({
-  //  repo: process.env.BLUESKY_USERNAME!,
-  //  collection: 'app.bsky.graph.listitem'
-  //});
-  //console.log("check data records content: ", records);
-  ////const {repo, collection, rkey} = new AtUri(abablipListUri)
-  ////console.log(repo, collection, rkey);
-  //let wth = await agent.com.atproto.repo.getRecord({
-  //  repo: process.env.BLUESKY_USERNAME!,
-  //  collection: 'app.bsky.graph.listitem',
-  //  rkey: "3ld7n2uuzfr2v"
-  //});
-  //console.log("check 12, 21:", wth);
-  console.log("check 12, 21");
-}
-
-async function main() {
-  await agent.login({ identifier: process.env.BLUESKY_USERNAME!, password: process.env.BLUESKY_PASSWORD!});
+async function doListCleanUp() {
+  await agent.login({ identifier: ABABLIP_HANDLE, password: ABABLIP_PSWD });
   let abablipFollowers = await getAbablipFilteredFollowers();
   let abablipListMembers = await getAbablipListMembers();
-  //await agent.post({
-  //    text: "🇧🇮"
-  //    text: "🙂"
-  //
-  //});
-  console.log("Just posted!");
-  //showPromiseData("show just abablip followers:", abablipFollowers);
-  //showPromiseData("show list members:", abablipListMembers);
-  let ffs = getAbablipLeaving(abablipFollowers, abablipListMembers);
-  console.log("FFS: ", ffs);
-  addNewAbablipsFollowersToAbablipsListWhenApplicable();
-  testApiEntry();
+  showPromiseData("checkout followers data", abablipFollowers);
+  showPromiseData("checkout list members data", abablipListMembers);
+  let quitters = getAbablipLeaving(abablipFollowers, abablipListMembers);
+  if (quitters.length > 0) {
+    cleanUpTheseQuittersFromAbablipList(quitters.map((listRecord: any) =>
+      listRecord!.uri!));
+  }
+  else {
+    console.log("cleanup not performed, not needed, all clear.");
+  }
 }
 
-main();
-
-// Run this on a cron job
 //const scheduleExpressionMinute = '* * * * *'; // Run once every minute for testing
-//const scheduleExpressionFifteenMinute = '*/15 * * * *'; // Run once every 15 minutes
-//const scheduleExpression = '0 */3 * * *'; // Run once every three hours in prod
+const scheduleExpressionFifteenMinute = '*/15 * * * *'; // Run every 15 minutes
+const scheduleExpressionTwicePerDay = '0 3,15 * * *'; // Run twice: 03AM, and 15PM
 
 //const job = new CronJob(scheduleExpressionMinute, main); // change to scheduleExpressionMinute for testing
-//const job = new CronJob(scheduleExpression, main); // change to scheduleExpressionMinute for testing
+const jobScanNewFollowers = new CronJob(scheduleExpressionFifteenMinute, doAddNewFollowersToFeed);
+const jobDoCleanUps = new CronJob(scheduleExpressionTwicePerDay, doListCleanUp);
 
+jobScanNewFollowers.start();
+jobDoCleanUps.start();
 //job.start();
