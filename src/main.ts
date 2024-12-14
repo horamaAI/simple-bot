@@ -36,13 +36,24 @@ async function getAbablipListMembers() {
   return members;
 }
 
+function isSubjectInAbablipFollowers(subjectDid: string, abablipFollowers: any) {
+  return !abablipFollowers.some((follower: any) => follower.did === subjectDid);
+}
+
+function getAbablipLeaving(abablipFollowers: any, abablipList: any) {
+  //showPromiseData("show just abablip followers:", abablipFollowers);
+  showPromiseData("show list members:", abablipList);
+  const abablipLeaving = abablipList.filter((listRecord: any) =>
+    isSubjectInAbablipFollowers(listRecord!.subject!.did!, abablipFollowers));
+  return abablipLeaving;
+}
+
 // show data when required, maybe most appropriate to activate when
 // in debug mode ?
-async function showPromiseData(msg: string, promiseData: Promise<any>) {
-  promiseData.then((content)=>{
-    console.log(msg, "show data content:", content);
-    //console.log(msg, " show data content size: ", content.length);
-  });
+//async function showPromiseData(msg: string, promiseData: Promise<any>) {
+function showPromiseData(msg: string, someData: any) {
+  //console.log(msg, "show data content:", someData);
+  console.log(msg, "show data content count:", someData.length);
 }
 
 function markNotificationsAsSeen() {
@@ -55,7 +66,7 @@ function markNotificationsAsSeen() {
 
 async function getUnreadFollowNotifications() {
   let { data: { notifications } } = await agent.app.bsky.notification.listNotifications();
-  return notifications!.filter((notification)=> !notification!.isRead && notification!.reason === "follow");
+  return notifications!.filter((notification) => !notification!.isRead && notification!.reason === "follow");
 }
 
 async function addFollowerToAbablipList(followerDid: string) {
@@ -71,15 +82,15 @@ async function addFollowerToAbablipList(followerDid: string) {
   });
 }
 
-async function removeRecord(rkeyToDelete: string) {
-  await agent.com.atproto.repo.deleteRecord({
-    repo: process.env.BLUESKY_USERNAME!,
-    collection: 'app.bsky.graph.listitem',
-    rkey: rkeyToDelete
-  });
-}
+//async function removeRecord(rkeyToDelete: string) {
+//  await agent.com.atproto.repo.deleteRecord({
+//    repo: process.env.BLUESKY_USERNAME!,
+//    collection: 'app.bsky.graph.listitem',
+//    rkey: rkeyToDelete
+//  });
+//}
 
-async function addNewAbablipsFollowersToAbablipsList() {
+async function addNewAbablipsFollowersToAbablipsListWhenApplicable() {
   let unreadFollowNotifications = getUnreadFollowNotifications();
   unreadFollowNotifications.then((notifications) => {
     notifications.forEach((newFollowNotification) => {
@@ -97,26 +108,37 @@ async function addNewAbablipsFollowersToAbablipsList() {
 }
 
 async function testApiEntry() {
-  //let { data: { notifications } } = await agent.app.bsky.notification.listNotifications();
-  //console.log("check content: ", notifications);
-  const {repo, collection, rkey} = new AtUri(abablipListUri)
-  console.log(repo, collection, rkey);
-   console.log("check 12, 21");
+  //let { data: { records } } = await agent.com.atproto.repo.listRecords({
+  //  repo: process.env.BLUESKY_USERNAME!,
+  //  collection: 'app.bsky.graph.listitem'
+  //});
+  //console.log("check data records content: ", records);
+  ////const {repo, collection, rkey} = new AtUri(abablipListUri)
+  ////console.log(repo, collection, rkey);
+  //let wth = await agent.com.atproto.repo.getRecord({
+  //  repo: process.env.BLUESKY_USERNAME!,
+  //  collection: 'app.bsky.graph.listitem',
+  //  rkey: "3ld7n2uuzfr2v"
+  //});
+  //console.log("check 12, 21:", wth);
+  console.log("check 12, 21");
 }
 
 async function main() {
   await agent.login({ identifier: process.env.BLUESKY_USERNAME!, password: process.env.BLUESKY_PASSWORD!});
-  let abablipFollowers = getAbablipFilteredFollowers();
-  let abablipListMembers = getAbablipListMembers();
+  let abablipFollowers = await getAbablipFilteredFollowers();
+  let abablipListMembers = await getAbablipListMembers();
   //await agent.post({
   //    text: "🇧🇮"
   //    text: "🙂"
   //
   //});
   console.log("Just posted!");
-  showPromiseData("show just abablip followers:", abablipFollowers);
-  showPromiseData("show list members:", abablipListMembers);
-  addNewAbablipsFollowersToAbablipsList();
+  //showPromiseData("show just abablip followers:", abablipFollowers);
+  //showPromiseData("show list members:", abablipListMembers);
+  let ffs = getAbablipLeaving(abablipFollowers, abablipListMembers);
+  console.log("FFS: ", ffs);
+  addNewAbablipsFollowersToAbablipsListWhenApplicable();
   testApiEntry();
 }
 
