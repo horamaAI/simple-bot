@@ -72,12 +72,11 @@ function cleanUpTheseQuittersFromAbablipList(quitters: Array<string>) {
 // section: add new followers to feed
 //******
 
-function markNotificationsAsSeen() {
- let nowDateTime: Date = new Date(Date.now())
- console.log("notifications marked as all seen at:", nowDateTime)
+function markNotificationsAsSeen(nowDateTime: Date) {
  agent.app.bsky.notification.updateSeen({
    seenAt: nowDateTime.toISOString()
  });
+ console.log(nowDateTime, ": notifications marked as all seen.");
 }
 
 async function getUnreadFollowNotifications() {
@@ -133,22 +132,23 @@ function showPromiseData(msg: string, someData: any) {
 //}
 //main();
 
-async function doAddNewFollowersToFeed() {
+async function doAddNewFollowersToFeedWhenApplicable() {
   await agent.login({ identifier: ABABLIP_HANDLE, password: ABABLIP_PSWD });
   let unreadFollowNotifications = getUnreadFollowNotifications();
   unreadFollowNotifications.then((notifications) => {
     let count = 0;
+    let nowDateTime: Date = new Date(Date.now());
     notifications.forEach((newFollowNotification) => {
       let newFollower = newFollowNotification!.author!;
       if(isFollowerReallyUmublip(newFollower)){
         addFollowerToAbablipList(newFollower.did);
-        console.log("added to abablip list new follower: ", newFollower.handle);
+        console.log(nowDateTime, ": added to abablip list new follower:", newFollower.handle);
       }
       count++;
     });
     // mark all notifications as read
     if (notifications.length > 0 && notifications.length === count) {
-      markNotificationsAsSeen();
+      markNotificationsAsSeen(nowDateTime);
     }
   });
 }
@@ -174,7 +174,7 @@ const scheduleExpressionFifteenMinute = '*/15 * * * *'; // Run every 15 minutes
 const scheduleExpressionTwicePerDay = '0 3,15 * * *'; // Run twice: 03AM, and 15PM
 
 //const job = new CronJob(scheduleExpressionMinute, main); // change to scheduleExpressionMinute for testing
-const jobScanNewFollowers = new CronJob(scheduleExpressionFifteenMinute, doAddNewFollowersToFeed);
+const jobScanNewFollowers = new CronJob(scheduleExpressionFifteenMinute, doAddNewFollowersToFeedWhenApplicable);
 const jobDoCleanUps = new CronJob(scheduleExpressionTwicePerDay, doListCleanUp);
 
 jobScanNewFollowers.start();
