@@ -102,14 +102,6 @@ async function addFollowerToAbablipList(followerDid: string) {
 // section: utils, and, frankly, trash...
 //******
 
-// show data when needs debugging
-// maybe more appropriate to use solution active in debug mode ?
-//async function showPromiseData(msg: string, promiseData: Promise<any>) {
-function showPromiseData(msg: string, someData: any) {
-  //console.log(msg, "show data content:", someData);
-  console.log(msg, "show data content count:", someData.length);
-}
-
 //async function testApiEntry() {
   //let { data: { records } } = await agent.com.atproto.repo.listRecords({
   //  repo: ABABLIP_HANDLE,
@@ -118,22 +110,28 @@ function showPromiseData(msg: string, someData: any) {
   //console.log("check 12, 21");
 //}
 
-//async function main() {
-//  await agent.login({ identifier: ABABLIP_HANDLE, password: ABABLIP_PSWD });
-//  //await agent.post({
-//  //    text: "🇧🇮"
-//  //    text: "🙂"
-//  //
-//  //});
-//  console.log("Just posted!");
-//  testApiEntry();
-//}
-//main();
-
+// show data when needs debugging
+// maybe more appropriate to use solution active in debug mode ?
+//async function showPromiseData(msg: string, promiseData: Promise<any>) {
+function showPromiseData(msg: string, someData: any) {
+  //console.log(msg, "show data content:", someData);
+  console.log(msg, "show data content count:", someData.length);
+}
 
 //******
 // section: main processes and their jobs
 //******
+
+//async function main() {
+//  await agent.login({ identifier: ABABLIP_HANDLE, password: ABABLIP_PSWD });
+//  await agent.post({
+//      text: "🇧🇮"
+//      //text: "🙂"
+//  });
+//  console.log("Just posted!");
+//  //testApiEntry();
+//}
+//main();
 
 async function doAddNewFollowersToFeed() {
   await agent.login({ identifier: ABABLIP_HANDLE, password: ABABLIP_PSWD });
