@@ -95,6 +95,8 @@ async function addFollowerToAbablipList(followerDid: string) {
       createdAt: new Date().toISOString()
     }
   });
+ let nowDateTime: Date = new Date(Date.now());
+ console.log(nowDateTime, ": added new user to list:", followerDid);
 }
 
 //******
@@ -123,11 +125,12 @@ function showPromiseData(msg: string, someData: any) {
 
 //async function main() {
 //  await agent.login({ identifier: ABABLIP_HANDLE, password: ABABLIP_PSWD });
-//  await agent.post({
-//      text: "🇧🇮"
-//      //text: "🙂"
-//  });
+//  //await agent.post({
+//  //    text: "🇧🇮"
+//  //    //text: "🙂"
+//  //});
 //  console.log("Just posted!");
+//  manualRescue();
 //  //testApiEntry();
 //}
 //main();
@@ -169,14 +172,42 @@ async function doListCleanUp() {
   }
 }
 
+//******
+// section: in case for any (likely) reason notifications were read on browser
+//******
+
+function isFollowerAddedInFeedList(followerDid: string, abablipList: any) {
+  return abablipList.some((memberRecord: any) => memberRecord!.subject!.did! === followerDid);
+}
+
+function getAbablipNotAddedToList(abablipFollowers: any, abablipList: any) {
+  return abablipFollowers
+    // first remove myself, don't wan't to leave
+    .filter((follower: any) => !isFollowerAddedInFeedList(follower!.did!, abablipList));
+}
+
+async function manualRescue() {
+  await agent.login({ identifier: ABABLIP_HANDLE, password: ABABLIP_PSWD });
+  let abablipFollowers = await getAbablipFilteredFollowers();
+  let abablipListMembers = await getAbablipListMembers();
+  showPromiseData("checkout followers data", abablipFollowers);
+  showPromiseData("checkout list members data", abablipListMembers);
+  let pendings = getAbablipNotAddedToList(abablipFollowers, abablipListMembers);
+  showPromiseData("checkout pending list", pendings);
+  pendings.forEach((pendingFollower: any) => addFollowerToAbablipList(pendingFollower.did));
+}
+
 //const scheduleExpressionMinute = '* * * * *'; // Run once every minute for testing
 const scheduleExpressionFifteenMinute = '*/15 * * * *'; // Run every 15 minutes
+const scheduleExpressionThirtyMinute = '*/30 * * * *';
 const scheduleExpressionTwicePerDay = '0 3,15 * * *'; // Run twice: 03AM, and 15PM
 
 //const job = new CronJob(scheduleExpressionMinute, main); // change to scheduleExpressionMinute for testing
 const jobScanNewFollowers = new CronJob(scheduleExpressionFifteenMinute, doAddNewFollowersToFeedWhenApplicable);
 const jobDoCleanUps = new CronJob(scheduleExpressionTwicePerDay, doListCleanUp);
+const jobDoManualRescue = new CronJob(scheduleExpressionThirtyMinute, manualRescue);
 
 jobScanNewFollowers.start();
 jobDoCleanUps.start();
+jobDoManualRescue.start();
 //job.start();
