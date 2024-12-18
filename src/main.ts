@@ -190,22 +190,22 @@ async function manualRescue() {
   await agent.login({ identifier: ABABLIP_HANDLE, password: ABABLIP_PSWD });
   let abablipFollowers = await getAbablipFilteredFollowers();
   let abablipListMembers = await getAbablipListMembers();
-  showPromiseData("checkout followers data", abablipFollowers);
-  showPromiseData("checkout list members data", abablipListMembers);
   let pendings = getAbablipNotAddedToList(abablipFollowers, abablipListMembers);
-  showPromiseData("checkout pending list", pendings);
+  if (pendings.length > 0) {
+    showPromiseData("[manual-rescue] checkout pending followers", pendings);
+  }
   pendings.forEach((pendingFollower: any) => addFollowerToAbablipList(pendingFollower.did));
 }
 
 //const scheduleExpressionMinute = '* * * * *'; // Run once every minute for testing
 const scheduleExpressionFifteenMinute = '*/15 * * * *'; // Run every 15 minutes
-const scheduleExpressionThirtyMinute = '*/30 * * * *';
+const scheduleExpressionHourly = '*/60 * * * *';
 const scheduleExpressionTwicePerDay = '0 3,15 * * *'; // Run twice: 03AM, and 15PM
 
 //const job = new CronJob(scheduleExpressionMinute, main); // change to scheduleExpressionMinute for testing
 const jobScanNewFollowers = new CronJob(scheduleExpressionFifteenMinute, doAddNewFollowersToFeedWhenApplicable);
 const jobDoCleanUps = new CronJob(scheduleExpressionTwicePerDay, doListCleanUp);
-const jobDoManualRescue = new CronJob(scheduleExpressionThirtyMinute, manualRescue);
+const jobDoManualRescue = new CronJob(scheduleExpressionHourly, manualRescue);
 
 jobScanNewFollowers.start();
 jobDoCleanUps.start();
