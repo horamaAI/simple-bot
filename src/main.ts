@@ -198,16 +198,18 @@ async function manualRescue() {
 }
 
 //const scheduleExpressionMinute = '* * * * *'; // Run once every minute for testing
-const scheduleExpressionFifteenMinute = '*/15 * * * *'; // Run every 15 minutes
-const scheduleExpressionHourly = '*/60 * * * *';
+const scheduleExpressionFortyFiveMinutes = '*/45 * * * *';
+//const scheduleExpressionFifteenMinute = '*/15 * * * *'; // Run every 15 minutes
+const scheduleExpressionThreeHourly = '0 */3 * * *';
 const scheduleExpressionTwicePerDay = '0 3,15 * * *'; // Run twice: 03AM, and 15PM
 
 //const job = new CronJob(scheduleExpressionMinute, main); // change to scheduleExpressionMinute for testing
-const jobScanNewFollowers = new CronJob(scheduleExpressionFifteenMinute, doAddNewFollowersToFeedWhenApplicable);
+//const jobScanNewFollowers = new CronJob(scheduleExpressionFifteenMinute, doAddNewFollowersToFeedWhenApplicable);
+const jobScanNewFollowers = new CronJob(scheduleExpressionFortyFiveMinutes, doAddNewFollowersToFeedWhenApplicable);
+const jobDoManualRescue = new CronJob(scheduleExpressionThreeHourly, manualRescue);
 const jobDoCleanUps = new CronJob(scheduleExpressionTwicePerDay, doListCleanUp);
-const jobDoManualRescue = new CronJob(scheduleExpressionHourly, manualRescue);
 
 jobScanNewFollowers.start();
-jobDoCleanUps.start();
 jobDoManualRescue.start();
+jobDoCleanUps.start();
 //job.start();
